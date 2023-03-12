@@ -1,1 +1,1 @@
-# Numerical-Empirical-Sun-as-a-Star-Integrator-NESSI-
+# NESSI -Numerical-Empirical-Sun-as-a-Star-Integrator-
