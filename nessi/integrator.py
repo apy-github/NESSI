@@ -89,21 +89,21 @@ def _limbdarkening(wave, mu=1.0, nm=False):
     #this_dir, this_filename = os.path.split(__file__)
     #DATA_PATH = os.path.join(this_dir, "../data/limbdarkening_Neckel_Labs_1994.fits")
 
-    wave = np.atleast_1d(wave)  # Ensure input is iterable
+    wave = _np.atleast_1d(wave)  # Ensure input is iterable
 
     #table = Table(fits.getdata(DATA_PATH))
     table = Table(fits.getdata("limbdarkening_Neckel_Labs_1994.fits"))
-    wavetable = np.array(table['wavelength'])
+    wavetable = _np.array(table['wavelength'])
     if nm is False:
         wavetable *= 10.
 
     # Get table into 2D numpy array
-    Atable = np.array([ table['A0'], table['A1'], table['A2'],
+    Atable = _np.array([ table['A0'], table['A1'], table['A2'],
         table['A3'], table['A4'], table['A5'] ])
 
-    factor = np.zeros((wave.size), dtype='float64')
+    factor = _np.zeros((wave.size), dtype='float64')
     for ii in range(6):
-      Aint = np.interp(wave, wavetable, Atable[ii,:])
+      Aint = _np.interp(wave, wavetable, Atable[ii,:])
       factor += Aint * mu**ii
 
     return factor
@@ -204,9 +204,36 @@ def _get_sun_vrot(p0, b0, n=101, pts=None, rotref="s90"):
 #
 class sun_as_a_star(object):
 
-  def __init__(self, muclv, wavclv, clv, wavdc, dc \
+  def __init__(self \
         , nr=51, rotref="s90" \
-        , include_red_cclv=False, include_full_cclv=False):
+        , include_red_cclv=False, include_full_cclv=False \
+        , verbose=0):
+
+    self.verbose = verbose * 1
+
+    self.rad_cen, self.area, self.pts = get_grid(nr)
+    self.cclv_desc = "native"
+    if (include_red_cclv==True):
+      self.cclv_desc = "reduced"
+      if (self.verbose>1):
+        print("\t[] Including red cclv representation.")
+      #mu = _np.cos(_np.arcsin(self.rad_cen))
+      #self.cclv = _np.zeros((self.wave.size, mu.size), dtype="f8")
+      #for itw in range(self.wave.size):
+      #  self.cclv[itw,:] = _limbdarkening(self.wave[itw], mu)
+
+    elif (include_full_cclv==True):
+      self.cclv_desc = "full"
+      if (self.verbose>1):
+        print("\t[] Including full cclv representation.")
+      self.mu = _np.cos(_np.arcsin(self.rad_cen))
+
+    self.rotref = rotref
+
+    return
+
+
+  def update_clv(self, muclv, wavclv, clv, wavdc, dc):
 
     assert(wavdc.size==dc.size)
     assert(wavclv.size==clv.shape[1])
@@ -229,22 +256,13 @@ class sun_as_a_star(object):
     self.fclv = _RectBivariateSpline(rclv, wclv, clv)#test)
     self.fdc = _interp1d(wavdc, dc, bounds_error=False, fill_value="extrapolate")
 
-    self.rad_cen, self.area, self.pts = get_grid(nr)
-    self.cclv_desc = "native"
-    if (include_red_cclv==True):
-      self.cclv_desc = "reduced"
-      print("\t[] Including red cclv representation.")
+    if (self.cclv_desc == "reduced"):
+      if (self.verbose>1):
+        print("\t[] Including red cclv representation.")
       mu = _np.cos(_np.arcsin(self.rad_cen))
       self.cclv = _np.zeros((self.wave.size, mu.size), dtype="f8")
       for itw in range(self.wave.size):
         self.cclv[itw,:] = _limbdarkening(self.wave[itw], mu)
-
-    elif (include_full_cclv==True):
-      self.cclv_desc = "full"
-      print("\t[] Including full cclv representation.")
-      self.mu = _np.cos(_np.arcsin(self.rad_cen))
-
-    self.rotref = rotref
 
     return
 
