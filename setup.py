@@ -2,18 +2,21 @@ from setuptools import setup
 
 setup(
     name='NESSI',
-    version='0.0.0',    
+    version='0.0.1',    
     description='Numerical-Empirical-Sun-as-a-Star-Integrator',
     url='https://github.com/apy-github/NESSI',
     author='Adur Pastor Yabar',
     author_email='adur.pastor@astro.su.se',
     license='GPLv3',
-    packages=['nessi'],
+    packages=['nessi',],
+    package_data={'': ['data/*.npz', 'data/*.fits']},
     install_requires=['scipy',
-                      'numpy',                     
+                      'numpy',
+                      'astropy',
                       ],
     )
 
+#    package_dir={'': ''},
 #    classifiers=[
 #        'Development Status :: 1 - Planning',
 #        'Intended Audience :: Science/Research',
