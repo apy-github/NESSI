@@ -6,8 +6,10 @@ The CLV may or maynot include the continuum CLV. In the latter, it is possible t
 
 ## Requirements:
 
+  ```
   numpy
   scipy
+  ```
 
 ## Installation:
 
