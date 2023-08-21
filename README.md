@@ -43,7 +43,7 @@ The CLV may or maynot include the continuum CLV. In the latter, it is possible t
   Import the python module that performs the integration:
   
   ```
-  from nessi import integrator as saas
+  from nessi import integrator as nss
   ```
   
   Initializate the main class required to perform the resolved solar disk integration:
