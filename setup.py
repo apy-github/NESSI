@@ -12,6 +12,7 @@ setup(
     package_data={'': ['data/*.npz', 'data/*.fits']},
     install_requires=['scipy',
                       'numpy',
+                      'matplotlib',
                       'astropy',
                       ],
     )

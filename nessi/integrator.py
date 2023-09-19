@@ -62,7 +62,7 @@ def get_grid(nn):
 from astropy.table import Table
 from astropy.io import fits
 #
-def _limbdarkening(wave, mu=1.0, nm=False):
+def _limbdarkening(wave, mu=1.0, nm=False, path="./"):
     """
     Return limb-darkening factor given wavelength and viewing angle
     mu=cos(theta)
@@ -92,7 +92,7 @@ def _limbdarkening(wave, mu=1.0, nm=False):
     wave = _np.atleast_1d(wave)  # Ensure input is iterable
 
     #table = Table(fits.getdata(DATA_PATH))
-    table = Table(fits.getdata("limbdarkening_Neckel_Labs_1994.fits"))
+    table = Table(fits.getdata("%s/limbdarkening_Neckel_Labs_1994.fits" % (path,)))
     wavetable = _np.array(table['wavelength'])
     if nm is False:
         wavetable *= 10.
@@ -101,10 +101,16 @@ def _limbdarkening(wave, mu=1.0, nm=False):
     Atable = _np.array([ table['A0'], table['A1'], table['A2'],
         table['A3'], table['A4'], table['A5'] ])
 
-    factor = _np.zeros((wave.size), dtype='float64')
+    if (_np.size(mu)==_np.size(wave)):
+      factor = _np.zeros((_np.size(wave),), dtype='float64')
+    else:
+      factor = _np.zeros((_np.size(mu), _np.size(wave)), dtype='float64')
     for ii in range(6):
       Aint = _np.interp(wave, wavetable, Atable[ii,:])
-      factor += Aint * mu**ii
+      if (_np.size(mu)==_np.size(wave)):
+        factor += Aint[:] * mu[:]**ii
+      else:
+        factor += Aint[None,:] * mu[:,None]**ii
 
     return factor
 #
@@ -204,31 +210,36 @@ def _get_sun_vrot(p0, b0, n=101, pts=None, rotref="s90"):
 #
 class sun_as_a_star(object):
 
+  def __repr__(self):
+    msg = "Sun As A Star object"
+    return msg
+  def __contains__(self, key):
+    return key in self.__dict__
+  def __getitem__(self, key):
+    assert (key in self.__dict__), Exception("\n\tNo %s in %s!" % (key, self))
+    return getattr(self, key)
+
   def __init__(self \
         , nr=51, rotref="s90" \
         , include_red_cclv=False, include_full_cclv=False \
         , verbose=0):
 
-    self.verbose = verbose * 1
+    self._verbose = verbose * 1
 
     self.rad_cen, self.area, self.pts = get_grid(nr)
-    self.cclv_desc = "native"
+    self._cclv_desc = "native"
     if (include_red_cclv==True):
-      self.cclv_desc = "reduced"
-      if (self.verbose>1):
+      self._cclv_desc = "reduced"
+      if (self._verbose>1):
         print("\t[] Including red cclv representation.")
-      #mu = _np.cos(_np.arcsin(self.rad_cen))
-      #self.cclv = _np.zeros((self.wave.size, mu.size), dtype="f8")
-      #for itw in range(self.wave.size):
-      #  self.cclv[itw,:] = _limbdarkening(self.wave[itw], mu)
-
     elif (include_full_cclv==True):
-      self.cclv_desc = "full"
-      if (self.verbose>1):
+      self._cclv_desc = "full"
+      if (self._verbose>1):
         print("\t[] Including full cclv representation.")
       self.mu = _np.cos(_np.arcsin(self.rad_cen))
 
-    self.rotref = rotref
+    self._rotref = rotref
+    self._datapath = "/".join(__loader__.path.split("/")[0:-1]) + "/data/"
 
     return
 
@@ -253,22 +264,22 @@ class sun_as_a_star(object):
     wclv = wclv[ww] * 1.
     clv = clv[:,ww] * 1.
 
-    self.fclv = _RectBivariateSpline(rclv, wclv, clv)#test)
-    self.fdc = _interp1d(wavdc, dc, bounds_error=False, fill_value="extrapolate")
+    self._fclv = _RectBivariateSpline(rclv, wclv, clv)#test)
+    self._fdc = _interp1d(wavdc, dc, bounds_error=False, fill_value="extrapolate")
 
-    if (self.cclv_desc == "reduced"):
-      if (self.verbose>1):
+    if (self._cclv_desc == "reduced"):
+      if (self._verbose>1):
         print("\t[] Including red cclv representation.")
       mu = _np.cos(_np.arcsin(self.rad_cen))
-      self.cclv = _np.zeros((self.wave.size, mu.size), dtype="f8")
-      for itw in range(self.wave.size):
-        self.cclv[itw,:] = _limbdarkening(self.wave[itw], mu)
+      self.cclv = _limbdarkening(self.wave, mu, path=self._datapath).T
 
     return
 
   def update_vrot(self, p0, b0, return_vrot=False):
 
-    vrot = _get_sun_vrot(p0, b0, pts=self.pts, rotref=self.rotref)
+    self.p0 = p0 * 1.
+    self.b0 = b0 * 1.
+    vrot = _get_sun_vrot(self.p0, self.b0, pts=self.pts, rotref=self._rotref)
 
     c = 2.99792458e5
     self.dwave = self.wave[None,:] * vrot[:,None] / c
@@ -282,19 +293,73 @@ class sun_as_a_star(object):
 
     res = self.dc * 0.
     tarea = _np.nansum(self.area)
-    cclv = 1.
     for itw in range(self.nw):
 
       itwav = self.wave[itw] - self.dwave[:,itw]
-      tmp = self.fclv.ev(self.rad_cen, itwav)
-      tmpdc = self.fdc(itwav)
-      if (self.cclv_desc=="reduced"):
-        cclv = self.cclv
-      elif (self.cclv_desc=="full"):
-        cclv = _limbdarkening(itwav, self.mu)
+      sclv = self._fclv.ev(self.rad_cen, itwav)
+      dc = self._fdc(itwav)
+      if (self._cclv_desc=="reduced"):
+        cclv = self.cclv[itw,:]
+      elif (self._cclv_desc=="full"):
+        cclv = _limbdarkening(itwav, self.mu, path=self._datapath)
       else:
-        cclv = 1.
+        cclv = 0.
 
-      res[itw] = _np.sum(cclv * tmp * tmpdc * self.area) / tarea
+      res[itw] = _np.nansum((cclv + sclv) * dc * self.area) / tarea
 
     return res
+
+  def get_spectra_pxl(self, pxl):
+
+    res = self.dc * 0.
+    for itw in range(self.nw):
+
+      itwav = self.wave[itw] - self.dwave[pxl,itw]
+      sclv = self._fclv.ev(self.rad_cen[pxl], itwav)
+      dc = self._fdc(itwav)
+      if (self._cclv_desc=="reduced"):
+        cclv = self.cclv[itw,pxl]
+      elif (self._cclv_desc=="full"):
+        cclv = _limbdarkening(itwav, self.mu[pxl], path=self._datapath)
+      else:
+        cclv = 0.
+
+      res[itw] = (cclv + sclv) * dc
+
+    return res, self.area[pxl]
+
+  def show_vmap(self, fnum=1, cmap="RdBu_r", bar=1):
+
+    assert (("p0" in self) & ("b0" in self)), Exception("\n\tError: you MUST call ().update_vrot(...) first")
+
+    vrot = _get_sun_vrot(self.p0, self.b0, pts=self.pts, rotref=self._rotref)
+    _show_2Dmap(self.pts[0,:], self.pts[1,:], vrot, fnum=fnum, cmap=cmap, bar=bar)
+
+def _show_2Dmap(x, y, z, fnum=1, cmap="gist_gray", nr=101, bar=False):
+
+  import matplotlib.tri as tri
+  import matplotlib.pyplot as pl
+  pl.ion()  
+
+  xi = _np.linspace(-1.01, 1.01, num=nr)
+  yi = _np.linspace(-1.01, 1.01, num=nr)
+  triang = tri.Triangulation(x, y)
+  interpolator = tri.LinearTriInterpolator(triang, z)
+  Xi = xi[None,:] * (yi*0+1.)[:,None]
+  Yi = (xi*0+1)[None,:] * yi[:,None]
+  zi = interpolator(Xi, Yi)
+
+  pl.close(fnum)
+  pl.figure(fnum)
+  im = pl.imshow(zi \
+      , extent=[xi.min(), xi.max(), yi.min(), yi.max()] \
+      , origin="lower", interpolation="none", cmap=cmap)
+
+  if ((bar!=None)&(bar!=False)):
+    cbar = pl.colorbar(im)
+
+  pl.show()
+  pl.draw()
+
+  return
+
