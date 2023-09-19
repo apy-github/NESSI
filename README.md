@@ -60,6 +60,9 @@ The CLV may or maynot include the continuum CLV. In the latter, it is possible t
   saas.update_clv(mu,wav,clv,wav,dc)
   ```
   
+  mu and wav are 1d arrays with the mu, wav values for which the clv is evaluated.
+  Let set nmu to the size of mu and nwav the size of wav
+  clv is a 2d array of shape: (nmu, nwav) with the CLV to be used. If the class initialization includes any of include\_red\_cclv or include\_full\_cclv then clv must only include the CLV as respect to the disk center profile and without any continuum CLV (as it is included from Neckel & Labs 1992).
   Update the solar differential rotation velocity profile:
   
   ```
@@ -73,4 +76,12 @@ The CLV may or maynot include the continuum CLV. In the latter, it is possible t
   ```
   test_si = saas.get_integration()
   ```
+
+  If you want to obtain the spectrum for each grid point employed in the integration you can call:
+
+  ```
+  full_spectrum = saas.get_spectra()
+  ```
+
+  that returns a 2d array with dimension (nwav, npxl), where npxl are the number of grid points employed.
 

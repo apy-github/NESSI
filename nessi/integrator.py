@@ -328,6 +328,17 @@ class sun_as_a_star(object):
 
     return res, self.area[pxl]
 
+  def get_spectra(self):
+
+    npxl = self.pts.shape[1]
+    profs = _np.zeros((npxl, self.nw), dtype="f8")
+    for itn in range(npxl):
+      profs[itn,:] = self.get_spectra_pxl(itn)[0]
+
+    return profs
+
+
+
   def show_vmap(self, fnum=1, cmap="RdBu_r", bar=1):
 
     assert (("p0" in self) & ("b0" in self)), Exception("\n\tError: you MUST call ().update_vrot(...) first")
