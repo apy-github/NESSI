@@ -108,7 +108,7 @@ def _limbdarkening(wave, mu=1.0, nm=False, path="./"):
     for ii in range(6):
       Aint = _np.interp(wave, wavetable, Atable[ii,:])
       if (_np.size(mu)==_np.size(wave)):
-        factor += Aint[:] * mu[:]**ii
+        factor += Aint * mu**ii
       else:
         factor += Aint[None,:] * mu[:,None]**ii
 
@@ -327,6 +327,56 @@ class sun_as_a_star(object):
       res[itw] = (cclv + sclv) * dc
 
     return res, self.area[pxl]
+
+  def get_diff_spectra_fov(self, xx, yy, arr):
+
+    tw, ty, tx = arr.shape
+    pyy, pyx = yy.shape
+    pxy, pxx = xx.shape
+
+    assert(tw==self.nw)
+    assert(ty==pyy-1)
+    assert(ty==pxy-1)
+    assert(tx==pyx-1)
+    assert(tx==pxx-1)
+
+    assert(tx>1)
+    assert(ty>1)
+
+    xc = (xx[1:,1:] + xx[0:-1,0:-1]) / 2.
+    yc = (yy[1:,1:] + yy[0:-1,0:-1]) / 2.
+
+    dx = (xx[1:,1:] - xx[0:-1,0:-1])
+    dy = (yy[1:,1:] - yy[0:-1,0:-1])
+
+    dwave = self._get_dwave_xy(xc.flatten(),yc.flatten())
+    rad_dist = _np.atleast_1d(_np.sqrt(xc.flatten()**2+yc.flatten()**2))
+    mu = _np.cos(_np.arcsin(rad_dist))
+    area = (dx*dy).flatten()
+
+    res = self.dc * 0.
+    for itw in range(self.nw):
+
+      itwav = self.wave[itw] - dwave[:,itw]
+
+      cclv = _limbdarkening(itwav, mu, path=self._datapath)
+      sclv = self._fclv.ev(rad_dist, itwav)
+      dc = self._fdc(itwav)
+
+      res[itw] = _np.sum(  (arr.reshape(tw,-1)[itw,:] - (cclv + sclv) * dc) * area)
+
+    return res, _np.sum(area)
+
+  def _get_dwave_xy(self, x, y):
+
+    ipts = _np.vstack([_np.atleast_2d(x), _np.atleast_2d(y), _np.atleast_2d(_np.sqrt(1.-(x**2+y**2)))])
+
+    vrot = _get_sun_vrot(self.p0, self.b0, pts=ipts, rotref=self._rotref)
+
+    c = 2.99792458e5
+    return self.wave[None,:] * vrot[:,None] / c
+
+
 
   def get_spectra(self):
 
