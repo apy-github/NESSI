@@ -180,6 +180,13 @@ def _get_sun_vrot(p0, b0, n=101, pts=None, rotref="s90"):
 
   x, y, z = _rotate(x, y, z, ang, axis='z')
 
+  #olat = _np.arctan2(y, _np.sqrt(x**2+z**2))
+  #olon = _np.arctan2(x, z)
+
+  ang = b0 / 180. * _np.pi
+
+  x, y, z = _rotate(x, y, z, ang, axis='x')
+
   lat = _np.arctan2(y, _np.sqrt(x**2+z**2))
   lon = _np.arctan2(x, z)
 
@@ -194,14 +201,11 @@ def _get_sun_vrot(p0, b0, n=101, pts=None, rotref="s90"):
 
   circ = 2. * _np.pi * rsunred
   res = circ * (omega / 360. / (24.*3600.))   # km/s
+  res *= _np.cos(ang)
 
-  vz = res * _np.cos(lat) * _np.sin(lon)
-  vx = res * _np.cos(lat) * _np.cos(lon)
+  vz = res * _np.sin(lon)
+  vx = res * _np.cos(lon)
   vy = res * 0.
-
-  ang = b0 / 180. * _np.pi
-
-  vx, vy, vz = _rotate(vx, vy, vz, ang, axis='x')
 
   return vz.reshape(*odims)
 
@@ -396,7 +400,7 @@ class sun_as_a_star(object):
     vrot = _get_sun_vrot(self.p0, self.b0, pts=self.pts, rotref=self._rotref)
     _show_2Dmap(self.pts[0,:], self.pts[1,:], vrot, fnum=fnum, cmap=cmap, bar=bar)
 
-def _show_2Dmap(x, y, z, fnum=1, cmap="gist_gray", nr=101, bar=False):
+def _show_2Dmap(x, y, z, fnum=1, cmap="gist_gray", nr=101, bar=False, transform=False):
 
   import matplotlib.tri as tri
   import matplotlib.pyplot as pl
@@ -405,10 +409,17 @@ def _show_2Dmap(x, y, z, fnum=1, cmap="gist_gray", nr=101, bar=False):
   xi = _np.linspace(-1.01, 1.01, num=nr)
   yi = _np.linspace(-1.01, 1.01, num=nr)
   triang = tri.Triangulation(x, y)
-  interpolator = tri.LinearTriInterpolator(triang, z)
+
   Xi = xi[None,:] * (yi*0+1.)[:,None]
   Yi = (xi*0+1)[None,:] * yi[:,None]
-  zi = interpolator(Xi, Yi)
+
+  if (transform==True):
+    cinterpolator = tri.LinearTriInterpolator(triang, _np.cos(z))
+    sinterpolator = tri.LinearTriInterpolator(triang, _np.sin(z))
+    zi = _np.arctan2(sinterpolator(Xi, Yi), cinterpolator(Xi, Yi))
+  else:
+    interpolator = tri.LinearTriInterpolator(triang, z)
+    zi = interpolator(Xi, Yi)
 
   pl.close(fnum)
   pl.figure(fnum)
