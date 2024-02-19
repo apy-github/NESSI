@@ -363,13 +363,18 @@ class sun_as_a_star(object):
 
       itwav = self.wave[itw] - dwave[:,itw]
 
-      cclv = _limbdarkening(itwav, mu, path=self._datapath)
+      if (self._cclv_desc == "native"):
+        cclv = 0.
+      else:
+        raise Exception("Not yet implemented!")
+        cclv = _limbdarkening(itwav, mu, path=self._datapath)
       sclv = self._fclv.ev(rad_dist, itwav)
       dc = self._fdc(itwav)
 
-      res[itw] = _np.sum(  (arr.reshape(tw,-1)[itw,:] - (cclv + sclv) * dc) * area)
+      res[itw] = _np.nansum(  (arr.reshape(tw,-1)[itw,:] - (cclv + sclv) * dc) * area)
 
-    return res, _np.sum(area)
+    return res/_np.pi, _np.nansum(area)/_np.pi
+    # pi because I assume r=1
 
   def _get_dwave_xy(self, x, y):
 
@@ -380,6 +385,27 @@ class sun_as_a_star(object):
     c = 2.99792458e5
     return self.wave[None,:] * vrot[:,None] / c
 
+
+
+  def _get_mspectra(self, mask=None):
+
+    npxl = self.pts.shape[1]
+
+    if (type(mask)==type(None)):
+      mask = _np.ones((npxl,), dtype="i4")
+      print("\n\tIf calling this way, this is only useful if you are checking some internal consistency, otherwise you should call: self.get_integration()\n")
+    else:
+      assert (npxl==_np.size(mask)), Exception("If providing mask, it must match the size of the system.")
+
+    prof = 0.
+    area = 0.
+    for itn in range(npxl):
+      tmp = self.get_spectra_pxl(itn)
+      area += tmp[1]
+      if (mask[itn]>1.e-6):
+        prof += (tmp[1] * tmp[0])
+
+    return prof / area
 
 
   def get_spectra(self):
