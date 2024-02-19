@@ -112,8 +112,8 @@ def test_fov_accuracy():
   
     tmp = saas.get_diff_spectra_fov(xx,yy,fov_spectra)
   
-    ax.plot(test_si + tmp[0], label="Total Eclipse (%is ; %.5e)" % (i,tmp[1]))
-    resid = test_si + tmp[0]
+    ax.plot(test_si + tmp, label="Total Eclipse (%is)" % (i,))
+    resid = test_si + tmp
     print("\tn=%i ; rel. error: %.4e" % (i, np.nansum(resid*resid)/np.nansum(test_si*test_si),))
   
   ax.legend()
@@ -162,7 +162,7 @@ def test_fov_flat_emission():
   tmp = saas.get_diff_spectra_fov(xx,yy,fov_spectra)
   
   ax = axs[0]
-  ax.plot(test_si + tmp[0], label="FOV (1st quadrant)")
+  ax.plot(test_si + tmp, label="FOV (1st quadrant)")
   ax.legend()
 
   pl.show()
@@ -215,7 +215,7 @@ def test_east_west_hemispheres():
   tmp = saas.get_diff_spectra_fov(xx,yy,fov_spectra)
   
   ax = axs[0]
-  ax.plot(test_si + tmp[0], label="East Eclipse")
+  ax.plot(test_si + tmp, label="East Eclipse")
   mtest = saas._get_mspectra(mask=np.int16(saas.pts[0,:]>0))
   ax.plot(mtest, label="East Eclipse (brute-force check)")
   ax.legend()
@@ -236,11 +236,26 @@ def test_east_west_hemispheres():
   tmp = saas.get_diff_spectra_fov(xx,yy,fov_spectra)
   
   ax = axs[1]
-  #uts.nplot(test_si + tmp[0],noerase=1, plkwargs={"label":"West Eclipse"})
-  ax.plot(test_si + tmp[0], label="West Eclipse")
+  #uts.nplot(test_si + tmp,noerase=1, plkwargs={"label":"West Eclipse"})
+  ax.plot(test_si + tmp, label="West Eclipse")
   mtest = saas._get_mspectra(mask=np.int16(saas.pts[0,:]<0))
   ax.plot(mtest, label="West Eclipse (brute-force check)")
   ax.legend()
  
   pl.show()
   return
+
+def load_data_fov(nw):
+
+  import numpy as np
+
+  nx = 110
+  ny = 120
+  x1d = np.linspace(0.4,0.5,nx+1) # Notice! +1
+  y1d = np.linspace(0.4,0.5,ny+1) # Notice! +1
+  xx, yy = np.meshgrid(x1d,y1d)
+  
+  fov_spectra = np.ones((nw,ny,nx),dtype="f8")
+
+  return xx, yy, fov_spectra
+

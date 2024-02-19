@@ -373,7 +373,8 @@ class sun_as_a_star(object):
 
       res[itw] = _np.nansum(  (arr.reshape(tw,-1)[itw,:] - (cclv + sclv) * dc) * area)
 
-    return res/_np.pi, _np.nansum(area)/_np.pi
+    return res/_np.pi
+#, _np.nansum(area)/_np.pi
     # pi because I assume r=1
 
   def _get_dwave_xy(self, x, y):
