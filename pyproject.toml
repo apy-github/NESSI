@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+[project]
+name='NESSI'
+version='0.0.1'
+dynamic = ["dependencies"]
+requires-python = ">=3.9"
+authors = [
+  {name = "Adur Pastor Yabar", email = "adur.pastor@astro.su.se"}
+]
+maintainers = [
+  {name = "Adur Pastor Yabar", email = "adur.pastor@astro.su.se"}
+]
+description='Numerical-Empirical-Sun-as-a-Star-Integrator'
+readme = "README.md"
+license = {file = "LICENSE"}
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+[project.urls]
+Repository ='https://github.com/apy-github/NESSI'
